@@ -13,4 +13,50 @@
   <li><a href="{{plot.get_absolute_url}}">{{ plot.name }}</a></li>
   {% endfor %}
 </ul>
-{% endif %} {% endblock content %}
+{% endif %}
+
+<hr />
+
+<h2>Tank Control</h2>
+<div id="tank-list"></div>
+
+{% endblock content %} {% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    fetchTanks();
+
+    async function fetchTanks() {
+      const response = await fetch("/stats/get-tanks/");
+      const tanks = await response.json();
+      const tankList = document.getElementById("tank-list");
+      tankList.innerHTML = "";
+      tanks.forEach((tank) => {
+        const tankDiv = document.createElement("div");
+        tankDiv.className = "tank";
+        tankDiv.innerHTML = `
+          <h3>${tank.name}</h3>
+          <p>Volume: ${tank.volume}</p>
+          <button onclick="controlTank(${tank.id}, 'open')">Open</button>
+          <button onclick="controlTank(${tank.id}, 'close')">Close</button>
+        `;
+        tankList.appendChild(tankDiv);
+      });
+    }
+
+    window.controlTank = async function (tankId, action) {
+      const response = await fetch("/stats/control-tank/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-CSRFToken": "{{ csrf_token }}",
+        },
+        body: `tank_id=${tankId}&action=${action}`,
+      });
+      const result = await response.json();
+      alert(
+        result.message || `Tank ${result.tank} ${result.action}ed successfully`
+      );
+    };
+  });
+</script>
+{% endblock scripts %}

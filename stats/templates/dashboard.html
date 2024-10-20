@@ -1,4 +1,5 @@
 {% extends 'home.html' %} {% load static %} {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{% static 'dashboard.js' %}" defer></script>
 {% endblock scripts %} {% block content %}
 <div class="container">
@@ -14,10 +15,21 @@
       <input type="number" class="form-control" id="data-input" />
       <button class="btn btn-primary" id="submit-btn">Send</button>
     </div>
+    <div class="form-group">
+      <button class="btn btn-secondary" id="start-sim-btn">
+        Start Simulation
+      </button>
+      <button class="btn btn-danger" id="stop-sim-btn">Stop Simulation</button>
+    </div>
   </div>
   <div class="cols">
     <div class="col-md-12">
-      <div id="chart"></div>
+      <canvas id="chart-soilPh"></canvas>
+      <canvas id="chart-light"></canvas>
+      <canvas id="chart-ambientTemperature"></canvas>
+      <canvas id="chart-ambientHumidity"></canvas>
+      <canvas id="chart-soilMoistur"></canvas>
+      <canvas id="chart-soilTemperature"></canvas>
     </div>
   </div>
   <div id="data-box"></div>

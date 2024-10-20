@@ -1,9 +1,12 @@
 from django.urls import path
-from .views import index, dashboard
+from . import views
 
 app_name = 'stats'
 
 urlpatterns = [
-    path('', index, name='index'),
-    path('<name>', dashboard, name='dashboard'),
+    path('', views.index, name='index'),
+    path('<name>', views.dashboard, name='dashboard'),
+    path('get-tanks/', views.get_tanks, name='get_tanks'),
+    path('control-tank/', views.control_tank, name='control_tank'),
+    # Các URL khác...
 ]

@@ -4,6 +4,7 @@ import re
 from channels.db import database_sync_to_async
 from .models import Plot, RealStats
 from urllib.parse import unquote
+import requests
 
 class StatsConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -31,7 +32,14 @@ class StatsConsumer(AsyncWebsocketConsumer):
         sender = text_data_json['sender']
         print("received", message, sender)
 
-        await self.save_data_item(sender, message, self.name)
+        # Kiểm tra chỉ số pH và gọi API đóng/mở tank
+        data = json.loads(message)
+        ph_value = data.get('soilPh')
+        if ph_value is not None:
+            await self.control_tank_based_on_ph(ph_value)
+
+        # Lưu dữ liệu vào RealStats
+        await self.save_real_stats(data)
 
         await self.channel_layer.group_send(
             self.group_name,
@@ -50,14 +58,33 @@ class StatsConsumer(AsyncWebsocketConsumer):
             'sender': sender
         }))
 
-    @database_sync_to_async    
-    def create_data_item(self, sender, message, name):
+    @database_sync_to_async
+    def control_tank_based_on_ph(self, ph_value):
         try:
-            obj = Plot.objects.get(name=name)
-            return RealStats.objects.create(plot=obj, sender=sender, message=message)
-        except Plot.DoesNotExist:
-            print(f"Plot with name '{name}' does not exist.")
-            return None
+            ph_value = float(ph_value)  # Chuyển đổi ph_value sang số thực
+        except ValueError:
+            print("Invalid pH value:", ph_value)
+            return
 
-    async def save_data_item(self, sender, message, name):
-        await self.create_data_item(sender, message, name)
+        if ph_value < 5.5:
+            action = 'open'
+        elif ph_value > 7.5:
+            action = 'close'
+        else:
+            return
+
+        response = requests.post('http://localhost:8000/stats/control-tank/', data={'tank_id': 1, 'action': action})
+        print(response.json())
+
+    @database_sync_to_async
+    def save_real_stats(self, data):
+        plot = Plot.objects.get(name=self.name)
+        RealStats.objects.create(
+            plot=plot,
+            light=data.get('light', 0),
+            ambientTemperature=data.get('ambientTemperature', 0),
+            ambientHumidity=data.get('ambientHumidity', 0),
+            soilMoistur=data.get('soilMoistur', 0),
+            soilTemperature=data.get('soilTemperature', 0),
+            soilPh=data.get('soilPh', 0)
+        )
