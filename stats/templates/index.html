@@ -1,0 +1,16 @@
+{% extends 'home.html' %} {% block content %}
+
+<form method="post">
+  {% csrf_token %}
+  <div class="form-group">
+    <input type="text" name="newPlot" class="form-control" />
+    <button type="submit" class="btn btn-primary mt-3">Add Plot</button>
+  </div>
+</form>
+{% if plots %}
+<ul>
+  {% for plot in plots %}
+  <li><a href="{{plot.get_absolute_url}}">{{ plot.name }}</a></li>
+  {% endfor %}
+</ul>
+{% endif %} {% endblock content %}
