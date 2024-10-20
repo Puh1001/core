@@ -9,6 +9,7 @@ const plot = document.getElementById("plot-name").textContent.trim();
 const dataBox = document.getElementById("data-box");
 const startSimBtn = document.getElementById("start-sim-btn");
 const stopSimBtn = document.getElementById("stop-sim-btn");
+const simulateAlertBtn = document.getElementById("simulate-alert-btn");
 
 let simulationInterval;
 
@@ -63,6 +64,50 @@ const charts = {
   ),
 };
 
+const alertThresholds = {
+  soilPh: { min: 5.5, max: 7.5 },
+  light: { min: 0, max: 100 },
+  ambientTemperature: { min: 10, max: 40 },
+  ambientHumidity: { min: 20, max: 80 },
+  soilMoistur: { min: 10, max: 60 },
+  soilTemperature: { min: 10, max: 40 },
+};
+
+const checkAlerts = (data) => {
+  const alerts = [];
+  Object.keys(alertThresholds).forEach((key) => {
+    if (data[key] !== undefined) {
+      const value = parseFloat(data[key]);
+      const { min, max } = alertThresholds[key];
+      if (value < min || value > max) {
+        alerts.push({ parameter: key, value: value });
+      }
+    }
+  });
+  return alerts;
+};
+
+const sendEmailAlert = (parameter, value) => {
+  fetch("/stats/send-email-alert/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCookie("csrftoken"),
+    },
+    body: JSON.stringify({
+      parameter: parameter,
+      value: value,
+      plot: plot,
+    }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.status !== "success") {
+        console.error("Failed to send email alert");
+      }
+    });
+};
+
 socket.onmessage = function (e) {
   const { message, sender } = JSON.parse(e.data);
   dataBox.innerHTML += `<p>${sender}: ${message}</p>`;
@@ -115,4 +160,35 @@ stopSimBtn.onclick = function () {
     clearInterval(simulationInterval);
     simulationInterval = null;
   }
+};
+
+simulateAlertBtn.onclick = function () {
+  const simulatedAlertData = {
+    soilPh: 4.0, // Giá trị pH giả lập vượt ngưỡng
+    light: 150, // Giá trị ánh sáng giả lập vượt ngưỡng
+    ambientTemperature: 50, // Giá trị nhiệt độ giả lập vượt ngưỡng
+    ambientHumidity: 90, // Giá trị độ ẩm giả lập vượt ngưỡng
+    soilMoistur: 5, // Giá trị độ ẩm đất giả lập vượt ngưỡng
+    soilTemperature: 50, // Giá trị nhiệt độ đất giả lập vượt ngưỡng
+  };
+  const alerts = checkAlerts(simulatedAlertData);
+  alerts.forEach((alert) => {
+    sendEmailAlert(alert.parameter, alert.value);
+  });
+};
+
+// Function to get CSRF token
+const getCookie = (name) => {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== "") {
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === name + "=") {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
 };
