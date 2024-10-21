@@ -102,8 +102,12 @@ const sendEmailAlert = (parameter, value) => {
   })
     .then((response) => response.json())
     .then((data) => {
-      if (data.status !== "success") {
-        console.error("Failed to send email alert");
+      if (data.status === "success") {
+        alert(`WARING: ${parameter} with value ${value}`);
+      } else {
+        alert(
+          `Failed to send email alert for ${parameter} with value ${value}`
+        );
       }
     });
 };
