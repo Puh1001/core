@@ -1,20 +1,28 @@
+# gateway/sensor_gateway.py
 import asyncio
 import json
 import aiohttp
 import logging
 from collections import defaultdict
+from control.sprinkler import SprinklerController
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class SensorGateway:
-    def __init__(self, gateway_id, server_url):
+    def __init__(self, gateway_id, server_url, perfect_stats):
         self.gateway_id = gateway_id
         self.server_url = server_url
         self.sensors = {}
         self.sensor_data = defaultdict(dict)
         self.reading_interval = 1  # seconds
         self._is_running = False
+        self.perfect_stats = perfect_stats
+        
+        # Khởi tạo controller cho vòi phun
+        self.sprinkler_controller = SprinklerController()
+        # Thêm các vòi phun mặc định
+        self.sprinkler_controller.add_sprinkler("sprinkler_001")
         
     def add_sensor(self, sensor):
         """Thêm cảm biến vào gateway"""
@@ -33,13 +41,33 @@ class SensorGateway:
                 logger.error(f"Error reading sensor {sensor.sensor_id}: {e}")
         return readings
     
+    async def process_sensor_data(self, readings):
+        """Xử lý dữ liệu cảm biến và điều khiển vòi phun"""
+        if not readings:
+            return
+            
+        # Kiểm tra các chỉ số với điều kiện lý tưởng
+        issues = self.perfect_stats.check_conditions(readings)
+        
+        # Log các vấn đề phát hiện được
+        if issues:
+            logger.warning(f"Detected issues: {json.dumps(issues, indent=2)}")
+            
+        # Điều khiển vòi phun dựa trên các vấn đề
+        await self.sprinkler_controller.control_sprinklers(issues)
+    
     async def send_data_to_server(self, data):
         """Gửi dữ liệu lên máy chủ"""
         try:
             async with aiohttp.ClientSession() as session:
                 payload = {
                     "gateway_id": self.gateway_id,
-                    "readings": data
+                    "readings": data,
+                    "sprinkler_states": {
+                        sprinkler_id: sprinkler.state.value
+                        for sprinkler_id, sprinkler in 
+                        self.sprinkler_controller.sprinklers.items()
+                    }
                 }
                 async with session.post(
                     f"{self.server_url}/api/sensor-data",
@@ -59,6 +87,9 @@ class SensorGateway:
             try:
                 # Đọc dữ liệu từ tất cả cảm biến
                 readings = await self.read_sensors()
+                
+                # Xử lý dữ liệu và điều khiển vòi phun
+                await self.process_sensor_data(readings)
                 
                 # Gửi dữ liệu lên server
                 if readings:
