@@ -18,8 +18,10 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import HttpResponseRedirect
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('stats/', include('stats.urls')),
+    path('', lambda request: HttpResponseRedirect('/stats/'))
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
