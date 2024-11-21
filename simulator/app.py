@@ -4,10 +4,12 @@ from sensor.temperature_sensor import TemperatureSensor
 from sensor.humidity_sensor import HumiditySensor
 from sensor.light_sensor import LightSensor
 from sensor.ph_sensor import PHSensor
+from models.perfect_stats import PerfectStats
 
 async def main():
     # Khởi tạo gateway
-    gateway = SensorGateway("gateway_001", "http://localhost:8000")
+    perfect_stats = PerfectStats.for_tomatoes()
+    gateway = SensorGateway("gateway_001", "http://localhost:3000", perfect_stats)
     
     # Thêm các cảm biến
     sensors = [
@@ -18,6 +20,8 @@ async def main():
         LightSensor("light_001"), # ánh sáng
         PHSensor("ph_001"), # pH
     ]
+    gateway.sprinkler_controller.set_auto_mode(True)
+    
     
     for sensor in sensors:
         gateway.add_sensor(sensor)

@@ -3,6 +3,7 @@ from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import json
+import uvicorn
 from collections import defaultdict
 
 app = FastAPI()
@@ -65,3 +66,11 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except:
         sensor_server.unregister(websocket)
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "app:app", 
+        host="127.0.0.1",
+        port=3000,       
+        reload=True       
+    )
